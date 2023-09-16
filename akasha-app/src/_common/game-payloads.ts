@@ -180,7 +180,7 @@ export function readGameProgress(buf: ByteBuffer): GameProgress {
 export function writeGameProgress(obj: GameProgress, buf: ByteBuffer) {
   buf.write1(obj.currentSet);
   buf.write1(obj.maxSet);
-  buf.writeArray(obj.score, buf.read1);
+  buf.writeArray(obj.score, buf.write1);
   buf.writeDate(new Date(obj.initialStartTime));
   buf.write4Unsigned(obj.totalTimespan);
   buf.writeBoolean(obj.suspended);
@@ -188,7 +188,7 @@ export function writeGameProgress(obj: GameProgress, buf: ByteBuffer) {
   buf.write4Unsigned(obj.consumedTimespanSum);
   buf.writeNullable(
     obj.resumeScheduleTime !== null ? new Date(obj.resumeScheduleTime) : null,
-    buf.readDate,
+    buf.writeDate,
   );
 }
 

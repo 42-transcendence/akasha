@@ -3,7 +3,7 @@ import { ByteBuffer } from "akasha-lib";
 import { ServerOptions } from "ws";
 import { ServiceGatewayBase } from "@/service/service-gateway";
 import { verifyClientViaQueryParam } from "@/service/ws-verify-client";
-import { GameMember, GameService } from "./game.service";
+import { GameService } from "./game.service";
 import { GameWebSocket } from "./game-websocket";
 import { GameServerOpcode } from "@common/game-opcodes";
 import { GameServer } from "./game.server";
@@ -19,6 +19,7 @@ import {
 } from "@common/game-payloads";
 import * as builder from "./game-payload-builder";
 import { GameMatchmaker } from "./game.matchmaker";
+import { GameMember } from "./game-room";
 
 @WebSocketGateway<ServerOptions>({
   path: "/game",

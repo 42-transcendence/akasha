@@ -310,7 +310,7 @@ export class AccountsService {
       // 2. Delete Secret
       const updatedAccount = await tx.account.update({
         where: { id },
-        data: { otpSecretKey: null }, //NOTE: Restricted
+        data: { otpSecret: { disconnect: true } }, //NOTE: Restricted
       });
       void updatedAccount;
       const deletedSecret = await tx.secret.delete({

@@ -10,7 +10,7 @@ import {
   writeGameRoomProps,
 } from "@common/game-payloads";
 import { ByteBuffer } from "akasha-lib";
-import { GameMember, GameRoom } from "./game.service";
+import { GameMember, GameRoom } from "./game-room";
 
 export function makeEnqueuedAlert(params: GameRoomParams) {
   const buf = ByteBuffer.createWithOpcode(GameClientOpcode.ENQUEUED);
