@@ -93,14 +93,14 @@ export class GameMatchmaker {
 
   static getMatchCoverage(elapsedTime: number): number {
     if (elapsedTime < 5000) {
-      // 5초 이내, +-25
-      return 50;
+      // 5초 이내, +-250
+      return 500;
     } else if (elapsedTime < 10000) {
-      // 10초 이내, +-40
-      return 80;
+      // 10초 이내, +-400
+      return 800;
     }
-    // 이후, +-100
-    return 200;
+    // 이후, +-1000
+    return 2000;
   }
 
   static isMatchable(ranges: (readonly [number, number])[]) {

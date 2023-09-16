@@ -1,13 +1,17 @@
 import { GameClientOpcode } from "@common/game-opcodes";
 import {
+  GameMemberStatistics,
   GameProgress,
   GameRoomEnterResult,
   GameRoomParams,
+  GameStatistics,
   MatchmakeFailedReason,
   writeGameMemberParams,
+  writeGameMemberStatistics,
   writeGameProgress,
   writeGameRoomParams,
   writeGameRoomProps,
+  writeGameStatistics,
 } from "@common/game-payloads";
 import { ByteBuffer } from "akasha-lib";
 import { GameMember, GameRoom } from "./game-room";
@@ -72,9 +76,13 @@ export function makeUpdateGame(progress: GameProgress | undefined) {
   return buf;
 }
 
-export function makeGameResult() {
+export function makeGameResult(
+  statistics: GameStatistics,
+  memberStatistics: GameMemberStatistics[],
+) {
   const buf = ByteBuffer.createWithOpcode(GameClientOpcode.GAME_RESULT);
-  //FIXME: 작성
+  writeGameStatistics(statistics, buf);
+  buf.writeArray(memberStatistics, writeGameMemberStatistics);
   return buf;
 }
 

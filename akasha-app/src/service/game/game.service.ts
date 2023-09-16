@@ -10,8 +10,11 @@ import { GameConfiguration } from "./game-config";
 import { PrismaService } from "@/prisma/prisma.service";
 import {
   GameInvitationPayload,
+  GameMemberStatistics,
+  GameOutcome,
   GameRoomEnterResult,
   GameRoomParams,
+  GameStatistics,
   isGameInvitationPayload,
 } from "@common/game-payloads";
 import { GameEntity } from "@common/generated/types";
@@ -252,22 +255,49 @@ export class GameService implements OnApplicationBootstrap, OnModuleDestroy {
     }
   }
 
-  async getRatingMap(
-    accountIds: string[],
-  ): Promise<Map<string, Glicko.Rating>> {
-    const data = await this.prisma.record.findMany({
-      where: { accountId: { in: accountIds } },
-      select: {
-        accountId: true,
-        skillRating: true,
-        ratingDeviation: true,
-      },
+  async saveGameResult(
+    statistics: GameStatistics,
+    memberStatistics: GameMemberStatistics[],
+  ) {
+    await this.prisma.$transaction(async (tx) => {
+      if (statistics.ladder) {
+        for (const member of memberStatistics) {
+          await tx.record.update({
+            where: { accountId: member.accountId },
+            data: {
+              winCount:
+                member.outcome === GameOutcome.WIN
+                  ? { increment: 1 }
+                  : undefined,
+              loseCount:
+                member.outcome === GameOutcome.LOSE
+                  ? { increment: 1 }
+                  : undefined,
+              tieCount:
+                member.outcome === GameOutcome.TIE
+                  ? { increment: 1 }
+                  : undefined,
+              skillRating: member.finalSkillRating,
+              ratingDeviation: member.finalRatingDeviation,
+            },
+          });
+        }
+      }
+      await tx.gameHistory.create({
+        data: {
+          id: statistics.gameId,
+          ladder: statistics.ladder,
+          timestamp: statistics.timestamp,
+          statistic: statistics,
+          memberStatistics,
+          members: {
+            connect: memberStatistics.map((e) => ({
+              id: e.accountId,
+            })),
+          },
+        },
+      });
     });
-    return data.reduce(
-      (map, e) =>
-        map.set(e.accountId, { sr: e.skillRating, rd: e.ratingDeviation }),
-      new Map<string, Glicko.Rating>(),
-    );
   }
 
   async accomplishAchievement(

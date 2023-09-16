@@ -59,7 +59,7 @@ export function apply(
   outcome: number,
 ): Rating {
   const sum = opponents.reduce((prevSum, i) => {
-    const E = calcWinProb(sr, i.sr, i.rd);
+    const E = calcWinProb(rating.sr, i.sr, i.rd);
     return prevSum + g(i.rd) * (outcome - E);
   }, 0);
   const dSquareInverse = 1 / dSquare(rating.sr, opponents);
