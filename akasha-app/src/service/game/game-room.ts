@@ -19,7 +19,6 @@ export class GameRoom {
   readonly defaultMaxSet = 3;
   readonly defaultTimespan = 10 * 60 * 1000;
   readonly initialProgress = {
-    score: [0, 0], //FIXME: 2개팀 전제
     totalTimespan: this.defaultTimespan,
     suspended: false,
     consumedTimespanSum: 0,
@@ -206,6 +205,7 @@ export class GameRoom {
     this.progress = {
       ...this.initialProgress,
       currentSet: 0,
+      score: [0, 0], //FIXME: 2개팀 전제
       maxSet: this.defaultMaxSet,
       initialStartTime: Date.now(),
       suspended: true,
@@ -249,6 +249,7 @@ export class GameRoom {
       ...this.progress,
       ...this.initialProgress,
       currentSet: this.progress.currentSet + 1,
+      score: [0, 0], //FIXME: 2개팀 전제
       initialStartTime: Date.now(),
       suspended: true,
       resumedTime: Date.now(),
