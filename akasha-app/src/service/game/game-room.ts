@@ -226,6 +226,7 @@ export class GameRoom {
       timestamp: new Date(),
     });
     this.progress.suspended = true;
+    this.progress.consumedTimespanSum += Date.now() - this.progress.resumedTime;
     this.progress.resumeScheduleTime = Date.now() + this.defaultRestTime;
     this.progress.score[team] += value;
     this.sendUpdateRoom();
