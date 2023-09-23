@@ -163,15 +163,16 @@ model Avatar {
 }
 
 model Record {
-  account         Account       @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  accountId       String        @id @db.Uuid
-  achievements    Achievement[]
-  skillRating     Int           @default(0)
-  ratingDeviation Int           @default(0)
-  winCount        Int           @default(0)
-  loseCount       Int           @default(0)
-  tieCount        Int           @default(0)
-  gameStatistics  Json          @default("{}")
+  account          Account       @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  accountId        String        @id @db.Uuid
+  achievements     Achievement[]
+  skillRating      Int           @default(0)
+  ratingDeviation  Int           @default(0)
+  ratingVolatility Int           @default(0)
+  winCount         Int           @default(0)
+  loseCount        Int           @default(0)
+  tieCount         Int           @default(0)
+  gameStatistics   Json          @default("{}")
 
   @@index([skillRating(sort: Asc)])
   @@index([gameStatistics(ops: JsonbOps)], type: Gin)

@@ -184,7 +184,11 @@ export class GameService implements OnApplicationBootstrap, OnModuleDestroy {
           select: {
             game: true,
             record: {
-              select: { skillRating: true, ratingDeviation: true },
+              select: {
+                skillRating: true,
+                ratingDeviation: true,
+                ratingVolatility: true,
+              },
             },
             gameHistory: {
               where: { ladder: true },
@@ -215,9 +219,10 @@ export class GameService implements OnApplicationBootstrap, OnModuleDestroy {
             accountId,
             record.skillRating,
             Glicko.calcRatingDeviation(
-              record.ratingDeviation,
+              record.ratingDeviation / Glicko.FIXED_POINT_RATIO,
               account.gameHistory.map((e) => e.timestamp),
             ),
+            record.ratingVolatility / Glicko.FIXED_POINT_RATIO,
           );
         } else {
           // ResumeRoom
@@ -279,6 +284,7 @@ export class GameService implements OnApplicationBootstrap, OnModuleDestroy {
                   : undefined,
               skillRating: member.finalSkillRating,
               ratingDeviation: member.finalRatingDeviation,
+              ratingVolatility: member.finalRatingVolatility,
             },
           });
         }

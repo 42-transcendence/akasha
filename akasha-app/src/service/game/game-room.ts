@@ -34,8 +34,8 @@ export class GameRoom {
   firstAllReady = 0;
   progress: GameProgress | undefined;
   earnScoreList = Array<GameEarnScore>();
-  progresseStatistics: GameProgress[] = [];
-  earnScoreStatistics: GameEarnScore[][] = [];
+  progresseStatistics = Array<GameProgress>();
+  earnScoreStatistics = Array<Array<GameEarnScore>>();
   initialTimestamp = new Date();
   initialTeams = new Map<string, number>();
   initialRatings: Map<string, Glicko.Rating> | undefined;
@@ -54,6 +54,7 @@ export class GameRoom {
     accountId: string,
     skillRating: number,
     ratingDeviation: number,
+    ratingVolatility: number,
   ): void {
     this.unused = false;
     const member = new GameMember(
@@ -61,6 +62,7 @@ export class GameRoom {
       accountId,
       skillRating,
       ratingDeviation,
+      ratingVolatility,
     );
     this.members.set(accountId, member);
     this.server.uniqueAction(accountId, (client) => {
@@ -198,7 +200,11 @@ export class GameRoom {
     if (this.ladder) {
       this.initialRatings = [...this.members].reduce(
         (map, [key, val]) =>
-          map.set(key, { sr: val.skillRating, rd: val.ratingDeviation }),
+          map.set(key, {
+            sr: val.skillRating,
+            rd: val.ratingDeviation,
+            rv: val.ratingVolatility,
+          }),
         new Map<string, Glicko.Rating>(),
       );
     }
@@ -357,20 +363,21 @@ export class GameRoom {
     if (!incompleted && this.initialRatings !== undefined) {
       finalRatings = new Map<string, Glicko.Rating>();
       for (const [accountId, rating] of this.initialRatings) {
-        const opponents = [...this.initialRatings]
-          .filter(([key]) => key !== accountId)
-          .map(([, val]) => val);
         const team = this.initialTeams.get(accountId);
         if (team === undefined) {
           continue;
         }
-        const outcomeValue = GameRoom.getOutcomeValue(
-          outcomeMap.get(team) ?? GameOutcome.NONE,
-        );
-        finalRatings.set(
-          accountId,
-          Glicko.apply(rating, opponents, outcomeValue),
-        );
+        const opponents = [...this.initialRatings]
+          .filter(([key]) => key !== accountId)
+          .map(([, val]) => {
+            const { rv, ...rest } = val;
+            void rv;
+            const outcomeValue = GameRoom.getOutcomeValue(
+              outcomeMap.get(team) ?? GameOutcome.NONE, //FIXME: 특정 상대에 대한 승리 여부가 아님
+            );
+            return { ...rest, s: outcomeValue };
+          });
+        finalRatings.set(accountId, Glicko.apply(rating, opponents)); //FIXME: 충분한 표본이 모이지 않았음에도 점수 변동을 즉시 적용
       }
     }
     // Collect statistics
@@ -382,17 +389,29 @@ export class GameRoom {
       progresses: this.progresseStatistics,
       earnScores: this.earnScoreStatistics,
     };
-    const memberStatistics: GameMemberStatistics[] = [];
+    const memberStatistics = Array<GameMemberStatistics>();
     for (const [accountId, team] of this.initialTeams) {
+      const initRating = this.initialRatings?.get(accountId);
+      const finalRating = finalRatings?.get(accountId);
       memberStatistics.push({
         accountId,
         team,
         final: finalTeams.has(accountId),
         outcome: outcomeMap.get(team) ?? GameOutcome.NONE,
-        initialSkillRating: this.initialRatings?.get(accountId)?.sr,
-        initialRatingDeviation: this.initialRatings?.get(accountId)?.rd,
-        finalSkillRating: finalRatings?.get(accountId)?.sr,
-        finalRatingDeviation: finalRatings?.get(accountId)?.rd,
+        ...(initRating !== undefined
+          ? {
+              initialSkillRating: initRating.sr,
+              initialRatingDeviation: initRating.rd * Glicko.FIXED_POINT_RATIO,
+              initialRatingVolatility: initRating.rv * Glicko.FIXED_POINT_RATIO,
+            }
+          : undefined),
+        ...(finalRating !== undefined
+          ? {
+              finalSkillRating: finalRating.sr,
+              finalRatingDeviation: finalRating.rd * Glicko.FIXED_POINT_RATIO,
+              finalRatingVolatility: finalRating.rv * Glicko.FIXED_POINT_RATIO,
+            }
+          : undefined),
       });
     }
     await this.service.saveGameResult(statistics, memberStatistics);
@@ -430,6 +449,7 @@ export class GameMember implements GameMemberParams {
     readonly accountId: string,
     readonly skillRating: number,
     readonly ratingDeviation: number,
+    readonly ratingVolatility: number,
   ) {
     this.team = this.room.nextTeam();
   }

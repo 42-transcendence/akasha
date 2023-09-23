@@ -1,1 +1,0 @@
-export const DEFAULT_SKILL_RATING = 2000;

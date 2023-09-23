@@ -268,10 +268,12 @@ export type GameMemberStatistics = {
   team: number;
   final: boolean;
   outcome: GameOutcome;
-  initialSkillRating: number | undefined;
-  initialRatingDeviation: number | undefined;
-  finalSkillRating: number | undefined;
-  finalRatingDeviation: number | undefined;
+  initialSkillRating?: number | undefined;
+  initialRatingDeviation?: number | undefined;
+  initialRatingVolatility?: number | undefined;
+  finalSkillRating?: number | undefined;
+  finalRatingDeviation?: number | undefined;
+  finalRatingVolatility?: number | undefined;
 };
 
 export function readGameMemberStatistics(
@@ -284,8 +286,12 @@ export function readGameMemberStatistics(
   const initialSkillRating = buf.readNullable(buf.read4Unsigned) ?? undefined;
   const initialRatingDeviation =
     buf.readNullable(buf.read4Unsigned) ?? undefined;
+  const initialRatingVolatility =
+    buf.readNullable(buf.read4Unsigned) ?? undefined;
   const finalSkillRating = buf.readNullable(buf.read4Unsigned) ?? undefined;
   const finalRatingDeviation = buf.readNullable(buf.read4Unsigned) ?? undefined;
+  const finalRatingVolatility =
+    buf.readNullable(buf.read4Unsigned) ?? undefined;
   return {
     accountId,
     team,
@@ -293,8 +299,10 @@ export function readGameMemberStatistics(
     outcome,
     initialSkillRating,
     initialRatingDeviation,
+    initialRatingVolatility,
     finalSkillRating,
     finalRatingDeviation,
+    finalRatingVolatility,
   };
 }
 
@@ -308,6 +316,8 @@ export function writeGameMemberStatistics(
   buf.write1(obj.outcome);
   buf.writeNullable(obj.initialSkillRating ?? null, buf.write4Unsigned);
   buf.writeNullable(obj.initialRatingDeviation ?? null, buf.write4Unsigned);
+  buf.writeNullable(obj.initialRatingVolatility ?? null, buf.write4Unsigned);
   buf.writeNullable(obj.finalSkillRating ?? null, buf.write4Unsigned);
   buf.writeNullable(obj.finalRatingDeviation ?? null, buf.write4Unsigned);
+  buf.writeNullable(obj.finalRatingVolatility ?? null, buf.write4Unsigned);
 }

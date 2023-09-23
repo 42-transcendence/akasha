@@ -24,7 +24,12 @@ import {
   SecretParamsView,
   isSecretParams,
 } from "@common/auth-payloads";
-import { DEFAULT_SKILL_RATING } from "@common/game-constants";
+import {
+  DEFAULT_SKILL_RATING,
+  FIXED_POINT_RATIO,
+  INITIAL_RATING_VOLATILITY,
+  MAX_RATING_DEVIATION,
+} from "@/service/game/game-rating";
 
 /// AccountPublic
 const accountPublic = Prisma.validator<Prisma.AccountDefaultArgs>()({
@@ -143,7 +148,13 @@ export class AccountsService {
         changedTimestamp: new Date(),
         activeStatus: ActiveStatus.ONLINE,
         activeTimestamp: new Date(),
-        record: { create: { skillRating: DEFAULT_SKILL_RATING } },
+        record: {
+          create: {
+            skillRating: DEFAULT_SKILL_RATING,
+            ratingDeviation: MAX_RATING_DEVIATION * FIXED_POINT_RATIO,
+            ratingVolatility: INITIAL_RATING_VOLATILITY * FIXED_POINT_RATIO,
+          },
+        },
       },
       include: {
         otpSecret: true,
