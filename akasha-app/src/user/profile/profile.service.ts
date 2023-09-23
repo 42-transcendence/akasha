@@ -11,6 +11,7 @@ import {
   AccountProtected,
   AccountPublic,
   AccountsService,
+  AchievementElement,
   SecretValues,
 } from "@/user/accounts/accounts.service";
 import {
@@ -20,7 +21,6 @@ import {
   isSecretParams,
 } from "@common/auth-payloads";
 import {
-  AchievementEntity,
   ActiveStatus,
   ActiveStatusNumber,
   GameHistoryEntity,
@@ -31,13 +31,14 @@ import {
   AccountProfilePrivatePayload,
   AccountProfileProtectedPayload,
   AccountProfilePublicPayload,
+  AchievementElementEntity,
 } from "@common/profile-payloads";
 import { MAX_GAME_HISTORY, NICK_NAME_REGEX } from "@common/profile-constants";
 import { ChatServer } from "@/service/chat/chat.server";
 import { GameServer } from "@/service/game/game.server";
 import { FriendActiveFlags } from "@common/chat-payloads";
 import { encodeBase32, generateHMACKey } from "akasha-lib";
-import { Achievement, GameHistory, Record } from "@prisma/client";
+import { GameHistory, Record } from "@prisma/client";
 
 @Injectable()
 export class ProfileService {
@@ -252,6 +253,25 @@ export class ProfileService {
     throw new ForbiddenException();
   }
 
+  async useNickChanger(
+    payload: AuthPayload,
+    name: string,
+  ): Promise<AccountNickNameAndTag> {
+    if (payload.auth_level === AuthLevel.COMPLETED) {
+      if (!(await this.checkNick(name))) {
+        throw new BadRequestException();
+      }
+
+      return await this.accounts.updateNickAtomic(
+        payload.user_id,
+        name,
+        AccountsService.KeepNickTag,
+        true,
+      );
+    }
+    throw new ForbiddenException();
+  }
+
   async updateAvatar(
     payload: AuthPayload,
     avatarData: Buffer | null,
@@ -273,19 +293,19 @@ export class ProfileService {
       throw new NotFoundException();
     }
 
-    return { ...record };
+    return record;
   }
 
   async getAchievements(
     targetAccountId: string,
-  ): Promise<Omit<AchievementEntity, "accountId">[]> {
-    const achievements: Achievement[] | null =
+  ): Promise<AchievementElementEntity[]> {
+    const achievements: AchievementElement[] | null =
       await this.accounts.findAchievements(targetAccountId);
     if (achievements === null) {
       throw new NotFoundException();
     }
 
-    return achievements.map((e) => ({ ...e, accountId: undefined }));
+    return achievements;
   }
 
   async getGameHistoryList(
@@ -300,7 +320,7 @@ export class ProfileService {
       throw new NotFoundException();
     }
 
-    return gameHistoryList.map((e) => ({ ...e }));
+    return gameHistoryList;
   }
 
   async getGameHistory(gameId: string): Promise<GameHistoryEntity> {
@@ -310,6 +330,6 @@ export class ProfileService {
       throw new NotFoundException();
     }
 
-    return { ...gameHistory };
+    return gameHistory;
   }
 }

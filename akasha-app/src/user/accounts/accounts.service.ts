@@ -6,7 +6,6 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 import {
-  Achievement,
   ActiveStatus,
   BanCategory,
   GameHistory,
@@ -79,6 +78,14 @@ const secretValues = Prisma.validator<Prisma.SecretDefaultArgs>()({
   select: { data: true, params: true },
 });
 export type SecretValues = Prisma.SecretGetPayload<typeof secretValues>;
+
+/// AchievementElement
+const achievementElement = Prisma.validator<Prisma.AchievementDefaultArgs>()({
+  select: { achievementId: true, completedTimestamp: true },
+});
+export type AchievementElement = Prisma.AchievementGetPayload<
+  typeof achievementElement
+>;
 
 @Injectable()
 export class AccountsService {
@@ -377,24 +384,29 @@ export class AccountsService {
     return fromBitsString(friendReverse.activeFlags, FRIEND_ACTIVE_FLAGS_SIZE);
   }
 
+  static readonly KeepNickTag: unique symbol = Symbol("KeepNickTag");
+
   async updateNickAtomic(
     id: string,
     name: string,
-    tagHint: number | undefined,
+    tagHint: number | typeof AccountsService.KeepNickTag | undefined,
     overwrite: boolean,
   ): Promise<AccountNickNameAndTag> {
     return this.prisma.x.$transaction(async (tx) => {
       // 1. Check Exists Nick
       const account = await tx.account.findUniqueOrThrow({
+        ...accountNickNameAndTag,
         where: { id },
-        select: { nickName: true },
       });
       if (!overwrite && account.nickName !== null) {
         throw new BadRequestException("nickName already exists");
       }
 
       // 2. Pick Random Tag
-      const tagNumberQuery = await tx.account.generateTagNumber(name, tagHint);
+      const tagNumberQuery = await tx.account.generateTagNumber(
+        name,
+        tagHint === AccountsService.KeepNickTag ? account.nickTag : tagHint,
+      );
       if (!Array.isArray(tagNumberQuery) || tagNumberQuery.length === 0) {
         throw new ConflictException(
           `No more tagNumber left for name [${name}]`,
@@ -468,10 +480,10 @@ export class AccountsService {
     return account?.record ?? null;
   }
 
-  async findAchievements(id: string): Promise<Achievement[] | null> {
+  async findAchievements(id: string): Promise<AchievementElement[] | null> {
     const account = await this.prisma.account.findUnique({
       where: { id },
-      select: { record: { select: { achievements: true } } },
+      select: { record: { select: { achievements: achievementElement } } },
     });
     return account?.record?.achievements ?? null;
   }

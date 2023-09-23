@@ -1,4 +1,9 @@
-import { AccountEntity, BanCategoryNumber, BanEntity } from "./generated/types";
+import {
+  AccountEntity,
+  AchievementEntity,
+  BanCategoryNumber,
+  BanEntity,
+} from "./generated/types";
 
 /// AccountProfilePublicPayload
 export type AccountProfilePublicPayload = Pick<
@@ -20,3 +25,12 @@ export type BanSummaryPayload = Pick<
 > & {
   category: BanCategoryNumber;
 };
+
+/// NickNamePayload
+export type NickNamePayload = Pick<AccountEntity, "nickName">;
+
+/// OTPInputPayload
+export type OTPInputPayload = { otp: string };
+
+/// AchievementElementEntity
+export type AchievementElementEntity = Omit<AchievementEntity, "accountId">;

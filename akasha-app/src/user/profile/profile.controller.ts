@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -25,9 +24,10 @@ import {
   AccountProfilePrivatePayload,
   AccountProfileProtectedPayload,
   AccountProfilePublicPayload,
+  AchievementElementEntity,
 } from "@common/profile-payloads";
 import { AccountNickNameAndTag } from "@/user/accounts/accounts.service";
-import { NickNameModel } from "./profile-model";
+import { NickNameModel, OTPInputModel } from "./profile-model";
 import { FileInterceptor } from "@nestjs/platform-express";
 import {
   AVATAR_FORM_DATA_KEY,
@@ -35,11 +35,7 @@ import {
   AVATAR_MIME_REGEX,
 } from "@common/profile-constants";
 import { NickNamePipe } from "./profile.pipe";
-import {
-  AchievementEntity,
-  GameHistoryEntity,
-  RecordEntity,
-} from "@common/generated/types";
+import { GameHistoryEntity, RecordEntity } from "@common/generated/types";
 
 @Controller("profile")
 @UseGuards(AuthGuard)
@@ -78,7 +74,7 @@ export class ProfileController {
   @Get("public/:targetId/achievement")
   async getGameAchievementList(
     @Param("targetId", ParseUUIDPipe) targetId: string,
-  ): Promise<Omit<AchievementEntity, "accountId">[]> {
+  ): Promise<AchievementElementEntity[]> {
     return await this.profileService.getAchievements(targetId);
   }
 
@@ -109,7 +105,15 @@ export class ProfileController {
     @Auth() auth: AuthPayload,
     @Body() body: NickNameModel,
   ): Promise<AccountNickNameAndTag> {
-    return await this.profileService.registerNick(auth, body.name);
+    return await this.profileService.registerNick(auth, body.nickName);
+  }
+
+  @Put("private/nick")
+  async changeNick(
+    @Auth() auth: AuthPayload,
+    @Body() body: NickNameModel,
+  ): Promise<AccountNickNameAndTag> {
+    return await this.profileService.useNickChanger(auth, body.nickName);
   }
 
   @Post("private/avatar")
@@ -151,28 +155,22 @@ export class ProfileController {
   @Put("private/otp")
   async enableOTP(
     @Auth() auth: AuthPayload,
-    @Query("otp") clientOTP: string | undefined,
+    @Body() body: OTPInputModel,
   ): Promise<void> {
-    if (clientOTP === undefined) {
-      throw new BadRequestException("Undefined OTP");
-    }
-    return await this.profileService.enableOTP(auth, clientOTP);
+    return await this.profileService.enableOTP(auth, body.otp);
   }
 
   @Delete("private/otp")
   async disableOTP(
     @Auth() auth: AuthPayload,
-    @Query("otp") clientOTP: string | undefined,
+    @Body() body: OTPInputModel,
   ): Promise<void> {
-    if (clientOTP === undefined) {
-      throw new BadRequestException("Undefined OTP");
-    }
-    return await this.profileService.disableOTP(auth, clientOTP);
+    return await this.profileService.disableOTP(auth, body.otp);
   }
 
   @Get("check-nick")
   async checkNick(@Body() body: NickNameModel): Promise<boolean> {
-    return await this.profileService.checkNick(body.name);
+    return await this.profileService.checkNick(body.nickName);
   }
 
   @Get("game/:targetId")
