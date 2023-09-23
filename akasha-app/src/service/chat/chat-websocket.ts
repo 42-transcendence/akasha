@@ -4,7 +4,6 @@ import { ChatService } from "./chat.service";
 import { ChatServer } from "./chat.server";
 import { ActiveStatusNumber } from "@common/generated/types";
 import { AuthLevel } from "@common/auth-payloads";
-import * as builder from "./chat-payload-builder";
 import { FriendActiveFlags } from "@common/chat-payloads";
 
 export class ChatWebSocket extends ServiceWebSocketBase {
@@ -50,7 +49,8 @@ export class ChatWebSocket extends ServiceWebSocketBase {
     if (!invisible) {
       await this.chatService.setActiveTimestamp(this.accountId);
     }
-    this.notifyActiveStatus(
+    this.server.notifyActiveStatus(
+      this.accountId,
       FriendActiveFlags.SHOW_ACTIVE_STATUS |
         FriendActiveFlags.SHOW_ACTIVE_TIMESTAMP,
       invisible,
@@ -63,18 +63,11 @@ export class ChatWebSocket extends ServiceWebSocketBase {
     if (!invisible) {
       await this.chatService.setActiveTimestamp(this.accountId);
     }
-    this.notifyActiveStatus(
+    this.server.notifyActiveStatus(
+      this.accountId,
       FriendActiveFlags.SHOW_ACTIVE_STATUS |
         FriendActiveFlags.SHOW_ACTIVE_TIMESTAMP,
       invisible,
     );
-  }
-
-  notifyActiveStatus(activeFlags: number, invisible: boolean = false) {
-    const buf = builder.makeUpdateFriendActiveStatus(this.accountId);
-    void this.server.unicast(this.accountId, buf);
-    if (!invisible) {
-      void this.chatService.multicastToFriend(this.accountId, buf, activeFlags);
-    }
   }
 }

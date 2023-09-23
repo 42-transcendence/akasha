@@ -45,10 +45,8 @@ import {
   getRoleFromNumber,
   getRoleNumber,
 } from "@common/generated/types";
-import { ByteBuffer, fromBitsString, toBitsString } from "akasha-lib";
+import { fromBitsString, toBitsString } from "akasha-lib";
 import { getRoleLevel } from "@common/auth-payloads";
-import { ChatServer } from "./chat.server";
-import * as builder from "./chat-payload-builder";
 
 /// FriendForEntry
 function toFriendEntry(friend: Friend): FriendEntry {
@@ -271,7 +269,6 @@ export class ChatService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly accounts: AccountsService,
-    private readonly server: ChatServer,
   ) {}
 
   // forward
@@ -708,28 +705,6 @@ export class ChatService {
     const reverses = account.enemyReferences.map((e) => e.accountId);
 
     return new Set<string>([...forwards, ...reverses]);
-  }
-
-  async multicastToFriend(
-    id: string,
-    buf: ByteBuffer,
-    activeFlags?: number | undefined,
-  ): Promise<number> {
-    let counter = 0;
-    const duplexFriends = await this.getDuplexFriends(id);
-    for (const friend of duplexFriends) {
-      if (
-        activeFlags !== undefined &&
-        (friend.activeFlags & activeFlags) !== activeFlags
-      ) {
-        continue;
-      }
-
-      if (this.server.unicast(friend.friendAccountId, buf, undefined)) {
-        counter++;
-      }
-    }
-    return counter;
   }
 
   async loadJoinedRoomList(accountId: string): Promise<ChatRoomEntry[]> {
@@ -1649,47 +1624,6 @@ export class ChatService {
       where: { chatId_accountId: { chatId: pair.chatId, accountId } },
       data: { lastMessageId: pair.messageId },
     }));
-  }
-
-  async sendNotice(
-    chatId: string,
-    accountId: string,
-    content: string,
-  ): Promise<ChatMessageEntry | null> {
-    const message = await this.createNewChatMessage(
-      chatId,
-      accountId,
-      content,
-      MessageTypeNumber.NOTICE,
-    );
-    if (message !== null) {
-      void this.multicastToRoom(
-        chatId,
-        builder.makeChatMessagePayload(message),
-      );
-    }
-    return message;
-  }
-
-  async multicastToRoom(
-    chatId: string,
-    buf: ByteBuffer,
-    exceptAccountId?: string | undefined,
-  ): Promise<number> {
-    let counter = 0;
-    const memberSet = await this.getChatMemberSet(chatId);
-    if (memberSet !== null) {
-      for (const memberAccountId of memberSet) {
-        if (memberAccountId === exceptAccountId) {
-          continue;
-        }
-
-        if (this.server.unicast(memberAccountId, buf, undefined)) {
-          counter++;
-        }
-      }
-    }
-    return counter;
   }
 
   async getChatBanned(

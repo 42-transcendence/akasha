@@ -145,7 +145,7 @@ export class ChatGateway extends ServiceGatewayBase<ChatWebSocket> {
         await this.chatService.setActiveTimestamp(client.accountId);
         activeFlags |= FriendActiveFlags.SHOW_ACTIVE_TIMESTAMP;
       }
-      client.notifyActiveStatus(activeFlags);
+      this.server.notifyActiveStatus(client.accountId, activeFlags);
     }
   }
 
@@ -159,7 +159,11 @@ export class ChatGateway extends ServiceGatewayBase<ChatWebSocket> {
       ? ActiveStatusNumber.IDLE
       : ActiveStatusNumber.ONLINE;
     const invisible = await this.chatService.isInvisible(client.accountId);
-    client.notifyActiveStatus(FriendActiveFlags.SHOW_ACTIVE_STATUS, !invisible);
+    this.server.notifyActiveStatus(
+      client.accountId,
+      FriendActiveFlags.SHOW_ACTIVE_STATUS,
+      !invisible,
+    );
   }
 
   @SubscribeMessage(ChatServerOpcode.STATUS_MESSAGE)
@@ -169,7 +173,10 @@ export class ChatGateway extends ServiceGatewayBase<ChatWebSocket> {
     const statusMessage = payload.readString();
 
     await this.chatService.setStatusMessage(client.accountId, statusMessage);
-    client.notifyActiveStatus(FriendActiveFlags.SHOW_STATUS_MESSAGE);
+    this.server.notifyActiveStatus(
+      client.accountId,
+      FriendActiveFlags.SHOW_STATUS_MESSAGE,
+    );
   }
 
   @SubscribeMessage(ChatServerOpcode.ADD_FRIEND)
@@ -462,12 +469,12 @@ export class ChatGateway extends ServiceGatewayBase<ChatWebSocket> {
         chatId,
         undefined,
       );
-      void this.chatService.multicastToRoom(
+      void this.server.multicastToRoom(
         chatId,
         builder.makeInsertRoom(room, messages),
       );
 
-      void this.chatService.sendNotice(
+      void this.server.sendNotice(
         chatId,
         ownerAccountId,
         new URLSearchParams([
@@ -508,13 +515,13 @@ export class ChatGateway extends ServiceGatewayBase<ChatWebSocket> {
         member.accountId,
         builder.makeInsertRoom(room, messages),
       );
-      void this.chatService.multicastToRoom(
+      void this.server.multicastToRoom(
         room.id,
         builder.makeInsertRoomMember(room.id, member),
         member.accountId,
       );
 
-      void this.chatService.sendNotice(
+      void this.server.sendNotice(
         room.id,
         member.accountId,
         new URLSearchParams([
@@ -544,12 +551,12 @@ export class ChatGateway extends ServiceGatewayBase<ChatWebSocket> {
         client.accountId,
         builder.makeRemoveRoom(chatId),
       );
-      void this.chatService.multicastToRoom(
+      void this.server.multicastToRoom(
         chatId,
         builder.makeRemoveRoomMember(chatId, accountId),
       );
 
-      void this.chatService.sendNotice(
+      void this.server.sendNotice(
         chatId,
         accountId,
         new URLSearchParams([
@@ -587,13 +594,13 @@ export class ChatGateway extends ServiceGatewayBase<ChatWebSocket> {
         member.accountId,
         builder.makeInsertRoom(room, messages),
       );
-      void this.chatService.multicastToRoom(
+      void this.server.multicastToRoom(
         room.id,
         builder.makeInsertRoomMember(room.id, member),
         member.accountId,
       );
 
-      void this.chatService.sendNotice(
+      void this.server.sendNotice(
         room.id,
         member.accountId,
         new URLSearchParams([
@@ -625,7 +632,7 @@ export class ChatGateway extends ServiceGatewayBase<ChatWebSocket> {
     }
     if (result.errno === ChatErrorNumber.SUCCESS) {
       const { message } = result;
-      void this.chatService.multicastToRoom(
+      void this.server.multicastToRoom(
         chatId,
         builder.makeChatMessagePayload(message),
       );
@@ -698,13 +705,10 @@ export class ChatGateway extends ServiceGatewayBase<ChatWebSocket> {
     });
     if (result.errno === ChatErrorNumber.SUCCESS) {
       const { room } = result;
-      void this.chatService.multicastToRoom(
-        chatId,
-        builder.makeUpdateRoom(room),
-      );
+      void this.server.multicastToRoom(chatId, builder.makeUpdateRoom(room));
 
       if (title !== undefined) {
-        void this.chatService.sendNotice(
+        void this.server.sendNotice(
           chatId,
           client.accountId,
           new URLSearchParams([
@@ -738,12 +742,12 @@ export class ChatGateway extends ServiceGatewayBase<ChatWebSocket> {
     );
     if (result.errno === ChatErrorNumber.SUCCESS) {
       const { chatId, member } = result;
-      void this.chatService.multicastToRoom(
+      void this.server.multicastToRoom(
         chatId,
         builder.makeUpdateRoomMember(chatId, member),
       );
 
-      void this.chatService.sendNotice(
+      void this.server.sendNotice(
         chatId,
         client.accountId,
         new URLSearchParams([
@@ -777,13 +781,13 @@ export class ChatGateway extends ServiceGatewayBase<ChatWebSocket> {
     if (result.errno === ChatErrorNumber.SUCCESS) {
       const { chatId, members } = result;
       for (const member of members) {
-        void this.chatService.multicastToRoom(
+        void this.server.multicastToRoom(
           chatId,
           builder.makeUpdateRoomMember(chatId, member),
         );
       }
 
-      void this.chatService.sendNotice(
+      void this.server.sendNotice(
         chatId,
         client.accountId,
         new URLSearchParams([
@@ -823,12 +827,12 @@ export class ChatGateway extends ServiceGatewayBase<ChatWebSocket> {
       const { chatId, accountId, banId, ban } = result;
       void this.server.unicast(accountId, builder.makeKickNotify(chatId, ban));
       void this.server.unicast(accountId, builder.makeRemoveRoom(chatId));
-      void this.chatService.multicastToRoom(
+      void this.server.multicastToRoom(
         chatId,
         builder.makeRemoveRoomMember(chatId, accountId),
       );
 
-      void this.chatService.sendNotice(
+      void this.server.sendNotice(
         chatId,
         client.accountId,
         new URLSearchParams([
@@ -865,7 +869,7 @@ export class ChatGateway extends ServiceGatewayBase<ChatWebSocket> {
       const { chatId, accountId, banId, ban } = result;
       void this.server.unicast(accountId, builder.makeMuteNotify(chatId, ban));
 
-      void this.chatService.sendNotice(
+      void this.server.sendNotice(
         chatId,
         client.accountId,
         new URLSearchParams([
@@ -905,7 +909,7 @@ export class ChatGateway extends ServiceGatewayBase<ChatWebSocket> {
     if (result.errno === ChatErrorNumber.SUCCESS) {
       const { chatId, accountId, ban } = result;
 
-      void this.chatService.sendNotice(
+      void this.server.sendNotice(
         chatId,
         client.accountId,
         new URLSearchParams([

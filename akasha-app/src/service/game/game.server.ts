@@ -8,6 +8,8 @@ import {
   HANDSHAKE_TIMED_OUT,
   SHUTTING_DOWN,
 } from "@common/websocket-private-closecode";
+import { ChatServer } from "../chat/chat.server";
+import { FriendActiveFlags } from "@common/chat-payloads";
 
 @Injectable()
 export class GameServer implements BeforeApplicationShutdown {
@@ -16,6 +18,8 @@ export class GameServer implements BeforeApplicationShutdown {
   private readonly temporaryClients = new Set<GameWebSocket>();
   private readonly clients = new Map<string, GameWebSocket>();
   private readonly clients_matchmake = new Map<string, GameWebSocket>();
+
+  constructor(private readonly chatServer: ChatServer) {}
 
   async trackClientTemporary(client: GameWebSocket): Promise<void> {
     this.temporaryClients.add(client);
@@ -43,6 +47,12 @@ export class GameServer implements BeforeApplicationShutdown {
     } else {
       this.clients.set(client.accountId, client);
     }
+
+    // void await LocalServer.Chats.notifyActiveStatus(client.accountId);
+    this.chatServer.notifyActiveStatus(
+      client.accountId,
+      FriendActiveFlags.SHOW_ACTIVE_STATUS,
+    );
     return true;
   }
 
@@ -50,11 +60,18 @@ export class GameServer implements BeforeApplicationShutdown {
     if (client.handshakeState) {
       assert(client.accountId !== undefined);
       assert(client.matchmaking !== undefined);
+
       if (client.matchmaking) {
         assert(this.clients_matchmake.delete(client.accountId));
       } else {
         assert(this.clients.delete(client.accountId));
       }
+
+      // void await LocalServer.Chats.notifyActiveStatus(client.accountId);
+      this.chatServer.notifyActiveStatus(
+        client.accountId,
+        FriendActiveFlags.SHOW_ACTIVE_STATUS,
+      );
     } else {
       assert(this.temporaryClients.delete(client));
     }
