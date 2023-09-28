@@ -84,13 +84,14 @@ function node_version() {
 NODE_VERSION="$(node_version)"
 NODE_DISTRO="$(distro_name)"
 NODE_DIST_NAME="node-$NODE_VERSION-$NODE_DISTRO"
+ZIP_EXTENSION=".tar.xz"
 
 function validate_node() {
-	curl "https://nodejs.org/dist/$NODE_VERSION/SHASUMS256.txt" | grep "$NODE_DIST_NAME.tar.gz" | shasum -a 256 -c -
+	curl "https://nodejs.org/dist/$NODE_VERSION/SHASUMS256.txt" | grep "$NODE_DIST_NAME$ZIP_EXTENSION" | shasum -a 256 -c -
 }
 
 function download_node() {
-	curl -O "https://nodejs.org/dist/$NODE_VERSION/$NODE_DIST_NAME.tar.gz" && validate_node
+	curl -O "https://nodejs.org/dist/$NODE_VERSION/$NODE_DIST_NAME$ZIP_EXTENSION" && validate_node
 }
 
 NODE_DIRECTORY_NAME="node"
@@ -98,7 +99,7 @@ NODE_DIRECTORY_NAME="node"
 function install_node() {
 	echo "Install node.js. . ."
 
-	if [ -f "$NODE_DIST_NAME.tar.gz" ]
+	if [ -f "$NODE_DIST_NAME$ZIP_EXTENSION" ]
 	then
 		echo "File already exists, so we'll validate it first."
 		if validate_node
@@ -122,7 +123,7 @@ function install_node() {
 	fi
 
 	mkdir -p "$NODE_DIRECTORY_NAME"
-	tar -xvf "$NODE_DIST_NAME.tar.gz" -C "$NODE_DIRECTORY_NAME" --strip-components=1
+	tar -xvf "$NODE_DIST_NAME$ZIP_EXTENSION" -C "$NODE_DIRECTORY_NAME" --strip-components=1
 }
 
 NODE_PATH="$SETUP_DIRECTORY/$NODE_DIRECTORY_NAME/bin"
